@@ -1,12 +1,13 @@
 # Clinic Appointment System
 
-A Java 11 clinic management application with a desktop Swing interface, a console fallback mode, and SQLite persistence.
+A Java 11 clinic management application with a Swing desktop interface, CLI fallback mode, embedded HTTP API, and SQLite persistence.
 
 ## Features
 
 - Patient registration and login by generated `patientId`
 - Doctor registration and login by generated `doctorId`
 - Desktop dashboard for booking, reviewing, cancelling, and completing appointments
+- Embedded HTTP API for clinic data access and scheduling operations
 - Doctor schedule editing for work hours and slot length
 - Readable appointment views with doctor and patient names
 - Appointment booking by specialization, doctor, date, and available time slot
@@ -34,6 +35,7 @@ src/main/java/org/example
 ├── Doctor*.java                      Doctor hierarchy and factory
 ├── Patient*.java                     Patient entity and repository
 ├── *Repository.java                  Persistence layer
+├── api/ClinicHttpServer.java         Embedded HTTP API layer
 ├── dto/AppointmentDetails.java       Readable UI-facing appointment summary
 ├── service/OperationResult.java      Service result wrapper with messages
 └── ui/ClinicDesktopApp.java          Swing user interface
@@ -62,6 +64,22 @@ mvn exec:java
 On a normal local machine, this opens the desktop UI automatically. In a headless environment, the application falls back to the console workflow.
 
 The application creates `clinic.db` in the project root by default.
+
+### Run the HTTP API
+
+```bash
+mvn exec:java -Dexec.args="--api --port 8080"
+```
+
+Example endpoints:
+
+- `GET /api/health`
+- `GET /api/doctors`
+- `POST /api/doctors?name=Dr.%20Miles&specialization=therapist`
+- `POST /api/patients?name=Alice&phone=%2B7-777-100-2000`
+- `GET /api/doctors/1/slots?date=2026-05-04`
+- `POST /api/appointments/book?patientId=1&doctorId=1&date=2026-05-04&time=09:00`
+- `GET /api/patients/1/appointments`
 
 ### Run tests
 
@@ -94,6 +112,7 @@ This is mainly useful for tests and isolated local runs.
 - Past-date bookings are rejected.
 - Restarting the app no longer clears existing records.
 - The default run path opens a desktop Swing dashboard for patients and doctors.
+- The same application can also run as an embedded HTTP API server.
 - Doctors can update their working hours and slot duration from the UI.
 - Patient and doctor appointment lists now show joined human-readable details.
 

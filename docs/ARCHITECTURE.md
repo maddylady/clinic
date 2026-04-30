@@ -2,10 +2,12 @@
 
 ## Overview
 
-The application is a layered desktop system with a console fallback:
+The application is a layered clinic system with three runtime modes:
 
 1. `Main`
-   Starts the app and selects desktop or headless console mode.
+   Starts the app and selects desktop, console, or HTTP API mode.
+2. `api`
+   Exposes scheduling operations through an embedded HTTP server.
 2. `ui`
    Swing screens and user interactions.
 3. `ClinicFacade`
@@ -23,7 +25,14 @@ The application is a layered desktop system with a console fallback:
 - Seeds doctors on first run
 - Opens the Swing UI when graphics are available
 - Falls back to CLI menus in headless environments
+- Can start the embedded HTTP API with `--api`
 - Delegates business operations to `ClinicFacade`
+
+### `api`
+
+- `ClinicHttpServer` provides a lightweight HTTP layer using Java's built-in `HttpServer`
+- Supports health checks, doctor and patient registration, slot lookup, appointment booking, and appointment status updates
+- Reuses the same `ClinicFacade` business rules as the UI and CLI paths
 
 ### `ui`
 
@@ -56,6 +65,8 @@ This is the main place for business rules.
   Core application entry point, facade, repositories, and domain classes
 - `org.example.ui`
   Desktop Swing UI
+- `org.example.api`
+  Embedded HTTP API
 - `org.example.dto`
   Joined read models for display
 - `org.example.service`
@@ -111,6 +122,7 @@ Tests use temporary SQLite database files via `clinic.db.path` so they:
 - can verify persistence behavior across initializer calls
 - can validate booking and ownership rules deterministically
 - can validate schedule updates and joined appointment summaries
+- can validate HTTP API behavior against a temporary SQLite database
 
 ## Recommended Next Improvements
 

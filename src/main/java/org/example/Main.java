@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.api.ClinicHttpServer;
 import org.example.service.OperationResult;
 import org.example.ui.ClinicDesktopApp;
 
@@ -15,6 +16,14 @@ public class Main {
         DatabaseInitializer.init();
         ClinicFacade facade = new ClinicFacade();
         seedDoctorsIfNeeded(facade);
+
+        if (isApiMode(args)) {
+            int port = parsePort(args);
+            ClinicHttpServer server = new ClinicHttpServer(facade, port);
+            server.start();
+            System.out.println("Clinic HTTP API started on http://localhost:" + server.getPort());
+            return;
+        }
 
         if (!GraphicsEnvironment.isHeadless()) {
             ClinicDesktopApp.startApplication(facade);
@@ -338,6 +347,28 @@ public class Main {
                 System.out.print("Enter a number: ");
             }
         }
+    }
+
+    private static boolean isApiMode(String[] args) {
+        for (String arg : args) {
+            if ("--api".equals(arg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int parsePort(String[] args) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if ("--port".equals(args[i])) {
+                try {
+                    return Integer.parseInt(args[i + 1]);
+                } catch (NumberFormatException ignored) {
+                    return 8080;
+                }
+            }
+        }
+        return 8080;
     }
 
     // One-time seeding of doctors
