@@ -1,5 +1,7 @@
 package org.example;
 
+import org.example.dto.AppointmentDetails;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,6 +61,18 @@ public class AppointmentRepository {
         }
 
         return list;
+    }
+
+    public List<AppointmentDetails> getDetailsForPatient(int patientId) {
+        String sql = "SELECT a.id, a.doctor_id, a.patient_id, a.date_time, a.status, "
+                + "d.name AS doctor_name, d.specialization, "
+                + "p.name AS patient_name "
+                + "FROM appointments a "
+                + "JOIN doctors d ON d.id = a.doctor_id "
+                + "JOIN patients p ON p.id = a.patient_id "
+                + "WHERE a.patient_id = ? "
+                + "ORDER BY a.date_time";
+        return getAppointmentDetails(sql, patientId);
     }
 
     public Appointment getById(int id) {
@@ -193,6 +207,18 @@ public class AppointmentRepository {
         return list;
     }
 
+    public List<AppointmentDetails> getDetailsForDoctor(int doctorId) {
+        String sql = "SELECT a.id, a.doctor_id, a.patient_id, a.date_time, a.status, "
+                + "d.name AS doctor_name, d.specialization, "
+                + "p.name AS patient_name "
+                + "FROM appointments a "
+                + "JOIN doctors d ON d.id = a.doctor_id "
+                + "JOIN patients p ON p.id = a.patient_id "
+                + "WHERE a.doctor_id = ? "
+                + "ORDER BY a.date_time";
+        return getAppointmentDetails(sql, doctorId);
+    }
+
     public List<Appointment> getForDoctorOnDate(int doctorId, LocalDate date) {
         List<Appointment> result = new ArrayList<>();
 
@@ -222,6 +248,34 @@ public class AppointmentRepository {
                 result.add(a);
             }
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    private List<AppointmentDetails> getAppointmentDetails(String sql, int idValue) {
+        List<AppointmentDetails> result = new ArrayList<>();
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, idValue);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                result.add(new AppointmentDetails(
+                        rs.getInt("id"),
+                        rs.getInt("doctor_id"),
+                        rs.getString("doctor_name"),
+                        rs.getString("specialization"),
+                        rs.getInt("patient_id"),
+                        rs.getString("patient_name"),
+                        LocalDateTime.parse(rs.getString("date_time")),
+                        rs.getString("status")
+                ));
+            }
+        } catch (SQLException e) {
             e.printStackTrace();
         }
 

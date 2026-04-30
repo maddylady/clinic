@@ -1,12 +1,14 @@
 # Clinic Appointment System
 
-A Java 22 clinic management application with a desktop Swing interface, a console fallback mode, and SQLite persistence.
+A Java 11 clinic management application with a desktop Swing interface, a console fallback mode, and SQLite persistence.
 
 ## Features
 
 - Patient registration and login by generated `patientId`
 - Doctor registration and login by generated `doctorId`
 - Desktop dashboard for booking, reviewing, cancelling, and completing appointments
+- Doctor schedule editing for work hours and slot length
+- Readable appointment views with doctor and patient names
 - Appointment booking by specialization, doctor, date, and available time slot
 - Appointment state management with `CONFIRMED`, `CANCELLED`, and `COMPLETED`
 - SQLite-backed persistence that now survives application restarts
@@ -15,7 +17,7 @@ A Java 22 clinic management application with a desktop Swing interface, a consol
 
 ## Tech Stack
 
-- Java 22
+- Java 11
 - Maven
 - SQLite with `sqlite-jdbc`
 - JUnit 5
@@ -24,15 +26,17 @@ A Java 22 clinic management application with a desktop Swing interface, a consol
 
 ```text
 src/main/java/org/example
-├── Main.java                  Desktop entry point with console fallback
-├── ClinicDesktopApp.java      Swing user interface
-├── ClinicFacade.java          Application facade
-├── Database.java              SQLite connection management
-├── DatabaseInitializer.java   Schema creation
-├── Appointment*.java          Appointment domain and state pattern
-├── Doctor*.java               Doctor hierarchy and factory
-├── Patient*.java              Patient entity and repository
-└── *Repository.java           Persistence layer
+├── Main.java                         Desktop entry point with console fallback
+├── ClinicFacade.java                 Application facade
+├── Database.java                     SQLite connection management
+├── DatabaseInitializer.java          Schema creation
+├── Appointment*.java                 Appointment domain and state pattern
+├── Doctor*.java                      Doctor hierarchy and factory
+├── Patient*.java                     Patient entity and repository
+├── *Repository.java                  Persistence layer
+├── dto/AppointmentDetails.java       Readable UI-facing appointment summary
+├── service/OperationResult.java      Service result wrapper with messages
+└── ui/ClinicDesktopApp.java          Swing user interface
 ```
 
 ## Design Patterns Used
@@ -45,7 +49,7 @@ src/main/java/org/example
 
 ### Prerequisites
 
-- JDK 22
+- JDK 11+
 - Maven 3.9+
 
 ### Run the application
@@ -63,6 +67,13 @@ The application creates `clinic.db` in the project root by default.
 
 ```bash
 mvn test
+```
+
+### Build a runnable JAR
+
+```bash
+mvn package
+java -jar target/ClinicProject-1.0-SNAPSHOT.jar
 ```
 
 ## Database Configuration
@@ -83,6 +94,8 @@ This is mainly useful for tests and isolated local runs.
 - Past-date bookings are rejected.
 - Restarting the app no longer clears existing records.
 - The default run path opens a desktop Swing dashboard for patients and doctors.
+- Doctors can update their working hours and slot duration from the UI.
+- Patient and doctor appointment lists now show joined human-readable details.
 
 ## Documentation
 
@@ -90,6 +103,6 @@ This is mainly useful for tests and isolated local runs.
 
 ## Known Limitations
 
-- The desktop UI does not yet support editing doctor schedules.
-- Appointment listings show IDs rather than joined human-readable patient or doctor names.
+- Specialization values are still string-based instead of enum-backed.
+- The desktop UI is local desktop software, not a web or networked multi-user system.
 - The current desktop UI is intentionally local-only and does not provide multi-user concurrency feedback beyond booking failure messages.

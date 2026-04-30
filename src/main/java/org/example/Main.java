@@ -1,5 +1,8 @@
 package org.example;
 
+import org.example.service.OperationResult;
+import org.example.ui.ClinicDesktopApp;
+
 import java.awt.GraphicsEnvironment;
 import java.time.LocalTime;
 import java.time.LocalDate;
@@ -62,8 +65,13 @@ public class Main {
                 String name = scanner.nextLine();
                 System.out.print("Enter your phone number: ");
                 String phone = scanner.nextLine();
-                patientId = facade.registerPatient(name, phone);
-                System.out.println("Registration successful. Your patientId = " + patientId);
+                OperationResult<Integer> result = facade.registerPatientResult(name, phone);
+                if (!result.isSuccess()) {
+                    System.out.println(result.getMessage());
+                    continue;
+                }
+                patientId = result.getPayload();
+                System.out.println(result.getMessage() + " Your patientId = " + patientId);
                 break;
             }
 
@@ -184,12 +192,8 @@ public class Main {
         LocalTime chosenTime = slots.get(slotChoice - 1);
 
         // Attempt to book
-        boolean ok = facade.bookAppointmentInSlot(patientId, doctorId, date, chosenTime);
-        if (ok) {
-            System.out.println("Appointment successfully booked: " + date + " " + chosenTime);
-        } else {
-            System.out.println("Failed to book the appointment (the slot may already be taken).");
-        }
+        OperationResult<Void> result = facade.bookAppointmentInSlotResult(patientId, doctorId, date, chosenTime);
+        System.out.println(result.getMessage());
     }
 
     private static void showAppointmentsForPatient(ClinicFacade facade, int patientId) {
@@ -220,7 +224,7 @@ public class Main {
         System.out.print("Enter the appointment ID you want to cancel: ");
         int appId = readInt();
 
-        boolean cancelled = facade.cancelAppointmentForPatient(appId, patientId);
+        boolean cancelled = facade.cancelAppointmentForPatientResult(appId, patientId).isSuccess();
         if (cancelled) {
             System.out.println("If the current status allowed it, the appointment is now CANCELLED.");
         } else {
@@ -242,7 +246,12 @@ public class Main {
                 String name = scanner.nextLine();
                 System.out.print("Enter specialization (e.g., therapist or surgeon): ");
                 String specialization = scanner.nextLine().trim();
-                doctorId = facade.addDoctor(name, specialization);
+                OperationResult<Integer> result = facade.addDoctorResult(name, specialization);
+                if (!result.isSuccess()) {
+                    System.out.println(result.getMessage());
+                    continue;
+                }
+                doctorId = result.getPayload();
 
                 if (doctorId > 0) {
                     System.out.println("Doctor registered successfully. Your doctorId = " + doctorId);
@@ -312,7 +321,7 @@ public class Main {
         System.out.print("Enter the appointment ID you want to complete: ");
         int appId = readInt();
 
-        boolean completed = facade.completeAppointmentForDoctor(appId, doctorId);
+        boolean completed = facade.completeAppointmentForDoctorResult(appId, doctorId).isSuccess();
         if (completed) {
             System.out.println("If the status was CONFIRMED, the appointment is now COMPLETED.");
         } else {

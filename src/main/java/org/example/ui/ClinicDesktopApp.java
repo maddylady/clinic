@@ -1,4 +1,10 @@
-package org.example;
+package org.example.ui;
+
+import org.example.ClinicFacade;
+import org.example.Doctor;
+import org.example.Patient;
+import org.example.dto.AppointmentDetails;
+import org.example.service.OperationResult;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -15,8 +21,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SpinnerDateModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -26,19 +34,14 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class ClinicDesktopApp {
-    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final String[] SPECIALIZATIONS = {"therapist", "surgeon", "cardiologist"};
 
     private final ClinicFacade facade;
@@ -54,14 +57,17 @@ public class ClinicDesktopApp {
     private JComboBox<Doctor> doctorComboBox;
     private JSpinner appointmentDateSpinner;
     private JComboBox<LocalTime> slotComboBox;
-    private JList<Appointment> patientAppointmentsList;
+    private JList<AppointmentDetails> patientAppointmentsList;
 
     private Integer currentDoctorId;
     private JLabel doctorStatusLabel;
     private JTextField doctorLoginIdField;
     private JTextField doctorNameField;
     private JComboBox<String> doctorSpecializationComboBox;
-    private JList<Appointment> doctorAppointmentsList;
+    private JSpinner doctorStartTimeSpinner;
+    private JSpinner doctorEndTimeSpinner;
+    private JSpinner doctorSlotMinutesSpinner;
+    private JList<AppointmentDetails> doctorAppointmentsList;
 
     public ClinicDesktopApp(ClinicFacade facade) {
         this.facade = facade;
@@ -120,6 +126,7 @@ public class ClinicDesktopApp {
         tabs.setFont(new Font("SansSerif", Font.BOLD, 15));
         tabs.addTab("Patient Workspace", buildPatientTab());
         tabs.addTab("Doctor Workspace", buildDoctorTab());
+        tabs.addTab("Overview", buildOverviewTab());
         return tabs;
     }
 
@@ -141,8 +148,37 @@ public class ClinicDesktopApp {
         JPanel panel = new JPanel(new BorderLayout(16, 16));
         panel.setOpaque(false);
 
-        panel.add(buildDoctorAccountPanel(), BorderLayout.NORTH);
+        JPanel top = new JPanel(new BorderLayout(16, 16));
+        top.setOpaque(false);
+        top.add(buildDoctorAccountPanel(), BorderLayout.WEST);
+        top.add(buildDoctorSchedulePanel(), BorderLayout.CENTER);
+
+        panel.add(top, BorderLayout.NORTH);
         panel.add(buildDoctorAppointmentsPanel(), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JComponent buildOverviewTab() {
+        JPanel panel = createCard("Project Notes");
+        JTextArea area = new JTextArea();
+        area.setEditable(false);
+        area.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setText(
+                "This desktop view now sits on top of validated service operations.\n\n"
+                        + "Improvements in this version:\n"
+                        + "- readable appointment summaries with names instead of raw IDs\n"
+                        + "- editable doctor schedules\n"
+                        + "- clearer validation messages for booking and status changes\n"
+                        + "- test-backed persistence and scheduling rules\n"
+                        + "- packaging support for a runnable application jar\n"
+        );
+
+        JScrollPane pane = new JScrollPane(area);
+        pane.setBorder(BorderFactory.createLineBorder(new Color(222, 228, 235)));
+        panel.setLayout(new BorderLayout());
+        panel.add(pane, BorderLayout.CENTER);
         return panel;
     }
 
@@ -234,6 +270,7 @@ public class ClinicDesktopApp {
 
     private JComponent buildDoctorAccountPanel() {
         JPanel card = createCard("Doctor Access");
+        card.setPreferredSize(new Dimension(360, 260));
 
         doctorStatusLabel = createStatusLabel("No doctor selected");
         doctorLoginIdField = new JTextField();
@@ -257,6 +294,29 @@ public class ClinicDesktopApp {
         card.add(Box.createVerticalStrut(10));
         card.add(doctorStatusLabel);
 
+        return card;
+    }
+
+    private JComponent buildDoctorSchedulePanel() {
+        JPanel card = createCard("Doctor Schedule");
+
+        doctorStartTimeSpinner = buildTimeSpinner(LocalTime.of(9, 0));
+        doctorEndTimeSpinner = buildTimeSpinner(LocalTime.of(17, 0));
+        doctorSlotMinutesSpinner = new JSpinner(new SpinnerNumberModel(30, 10, 180, 5));
+
+        JButton loadButton = new JButton("Load Active Doctor Schedule");
+        styleSecondaryButton(loadButton);
+        loadButton.addActionListener(e -> loadDoctorSchedule());
+
+        JButton saveButton = new JButton("Save Schedule");
+        stylePrimaryButton(saveButton);
+        saveButton.addActionListener(e -> saveDoctorSchedule());
+
+        card.add(labeledField("Start Time", doctorStartTimeSpinner));
+        card.add(labeledField("End Time", doctorEndTimeSpinner));
+        card.add(labeledField("Slot Minutes", doctorSlotMinutesSpinner));
+        card.add(buttonRow(loadButton));
+        card.add(buttonRow(saveButton));
         return card;
     }
 
@@ -348,6 +408,17 @@ public class ClinicDesktopApp {
         return spinner;
     }
 
+    private JSpinner buildTimeSpinner(LocalTime time) {
+        SpinnerDateModel model = new SpinnerDateModel();
+        JSpinner spinner = new JSpinner(model);
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinner, "HH:mm");
+        spinner.setEditor(editor);
+        spinner.setValue(Date.from(time.atDate(LocalDate.now())
+                .atZone(ZoneId.systemDefault())
+                .toInstant()));
+        return spinner;
+    }
+
     private void stylePrimaryButton(JButton button) {
         button.setFocusPainted(false);
         button.setBackground(new Color(11, 122, 117));
@@ -386,14 +457,19 @@ public class ClinicDesktopApp {
             return;
         }
 
-        int patientId = facade.registerPatient(name, phone);
-        currentPatientId = patientId;
-        patientStatusLabel.setText("Active patient: " + name + " (#" + patientId + ")");
-        patientLoginIdField.setText(String.valueOf(patientId));
+        OperationResult<Integer> result = facade.registerPatientResult(name, phone);
+        if (!result.isSuccess()) {
+            showMessage(result.getMessage());
+            return;
+        }
+
+        currentPatientId = result.getPayload();
+        patientStatusLabel.setText("Active patient: " + name + " (#" + currentPatientId + ")");
+        patientLoginIdField.setText(String.valueOf(currentPatientId));
         patientNameField.setText("");
         patientPhoneField.setText("");
         refreshPatientAppointments();
-        showMessage("Patient registered with ID " + patientId + ".");
+        showMessage(result.getMessage() + " ID " + currentPatientId + ".");
     }
 
     private void loginDoctor() {
@@ -422,14 +498,20 @@ public class ClinicDesktopApp {
             return;
         }
 
-        int doctorId = facade.addDoctor(name, specialization);
-        currentDoctorId = doctorId;
-        doctorStatusLabel.setText("Active doctor: " + name + " (#" + doctorId + ")");
-        doctorLoginIdField.setText(String.valueOf(doctorId));
+        OperationResult<Integer> result = facade.addDoctorResult(name, specialization);
+        if (!result.isSuccess()) {
+            showMessage(result.getMessage());
+            return;
+        }
+
+        currentDoctorId = result.getPayload();
+        doctorStatusLabel.setText("Active doctor: " + name + " (#" + currentDoctorId + ")");
+        doctorLoginIdField.setText(String.valueOf(currentDoctorId));
         doctorNameField.setText("");
         refreshDoctorSelections();
+        loadDoctorSchedule();
         refreshDoctorAppointments();
-        showMessage("Doctor registered with ID " + doctorId + ".");
+        showMessage(result.getMessage() + " ID " + currentDoctorId + ".");
     }
 
     private void refreshDoctorSelections() {
@@ -476,26 +558,26 @@ public class ClinicDesktopApp {
             return;
         }
 
-        boolean booked = facade.bookAppointmentInSlot(currentPatientId, doctor.getId(), spinnerToLocalDate(), time);
-        if (!booked) {
-            showMessage("Booking failed. The slot may be unavailable or the date may be invalid.");
+        OperationResult<Void> result = facade.bookAppointmentInSlotResult(currentPatientId, doctor.getId(), spinnerToLocalDate(), time);
+        if (!result.isSuccess()) {
+            showMessage(result.getMessage());
             refreshAvailableSlots();
             return;
         }
 
-        showMessage("Appointment booked for " + doctor.getName() + " at " + time + ".");
+        showMessage(result.getMessage());
         refreshAvailableSlots();
         refreshPatientAppointments();
     }
 
     private void refreshPatientAppointments() {
         if (currentPatientId == null) {
-            patientAppointmentsList.setListData(new Appointment[0]);
+            patientAppointmentsList.setListData(new AppointmentDetails[0]);
             return;
         }
 
-        List<Appointment> appointments = facade.getAppointmentsForPatient(currentPatientId);
-        patientAppointmentsList.setListData(appointments.toArray(new Appointment[0]));
+        List<AppointmentDetails> appointments = facade.getAppointmentDetailsForPatient(currentPatientId);
+        patientAppointmentsList.setListData(appointments.toArray(new AppointmentDetails[0]));
     }
 
     private void cancelSelectedAppointment() {
@@ -504,31 +586,31 @@ public class ClinicDesktopApp {
             return;
         }
 
-        Appointment appointment = patientAppointmentsList.getSelectedValue();
+        AppointmentDetails appointment = patientAppointmentsList.getSelectedValue();
         if (appointment == null) {
             showMessage("Select an appointment to cancel.");
             return;
         }
 
-        boolean cancelled = facade.cancelAppointmentForPatient(appointment.getId(), currentPatientId);
-        if (!cancelled) {
-            showMessage("Unable to cancel that appointment.");
+        OperationResult<Void> result = facade.cancelAppointmentForPatientResult(appointment.getAppointmentId(), currentPatientId);
+        if (!result.isSuccess()) {
+            showMessage(result.getMessage());
             return;
         }
 
         refreshPatientAppointments();
         refreshAvailableSlots();
-        showMessage("Appointment updated.");
+        showMessage(result.getMessage());
     }
 
     private void refreshDoctorAppointments() {
         if (currentDoctorId == null) {
-            doctorAppointmentsList.setListData(new Appointment[0]);
+            doctorAppointmentsList.setListData(new AppointmentDetails[0]);
             return;
         }
 
-        List<Appointment> appointments = facade.getAppointmentsForDoctor(currentDoctorId);
-        doctorAppointmentsList.setListData(appointments.toArray(new Appointment[0]));
+        List<AppointmentDetails> appointments = facade.getAppointmentDetailsForDoctor(currentDoctorId);
+        doctorAppointmentsList.setListData(appointments.toArray(new AppointmentDetails[0]));
     }
 
     private void completeSelectedAppointment() {
@@ -537,20 +619,55 @@ public class ClinicDesktopApp {
             return;
         }
 
-        Appointment appointment = doctorAppointmentsList.getSelectedValue();
+        AppointmentDetails appointment = doctorAppointmentsList.getSelectedValue();
         if (appointment == null) {
             showMessage("Select an appointment to complete.");
             return;
         }
 
-        boolean completed = facade.completeAppointmentForDoctor(appointment.getId(), currentDoctorId);
-        if (!completed) {
-            showMessage("Unable to complete that appointment.");
+        OperationResult<Void> result = facade.completeAppointmentForDoctorResult(appointment.getAppointmentId(), currentDoctorId);
+        if (!result.isSuccess()) {
+            showMessage(result.getMessage());
             return;
         }
 
         refreshDoctorAppointments();
-        showMessage("Appointment updated.");
+        showMessage(result.getMessage());
+    }
+
+    private void loadDoctorSchedule() {
+        if (currentDoctorId == null) {
+            showMessage("Log in as a doctor first.");
+            return;
+        }
+
+        Doctor doctor = facade.getDoctorById(currentDoctorId);
+        if (doctor == null) {
+            showMessage("Doctor not found.");
+            return;
+        }
+
+        setSpinnerTime(doctorStartTimeSpinner, doctor.getWorkStart());
+        setSpinnerTime(doctorEndTimeSpinner, doctor.getWorkEnd());
+        doctorSlotMinutesSpinner.setValue(doctor.getSlotMinutes());
+    }
+
+    private void saveDoctorSchedule() {
+        if (currentDoctorId == null) {
+            showMessage("Log in as a doctor first.");
+            return;
+        }
+
+        LocalTime start = spinnerToLocalTime(doctorStartTimeSpinner);
+        LocalTime end = spinnerToLocalTime(doctorEndTimeSpinner);
+        int slotMinutes = (Integer) doctorSlotMinutesSpinner.getValue();
+
+        OperationResult<Void> result = facade.updateDoctorSchedule(currentDoctorId, start, end, slotMinutes);
+        showMessage(result.getMessage());
+        if (result.isSuccess()) {
+            refreshDoctorAppointments();
+            refreshDoctorSelections();
+        }
     }
 
     private Integer parseId(String value, String label) {
@@ -567,6 +684,21 @@ public class ClinicDesktopApp {
         return Instant.ofEpochMilli(selectedDate.getTime())
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
+    }
+
+    private LocalTime spinnerToLocalTime(JSpinner spinner) {
+        Date selectedTime = (Date) spinner.getValue();
+        return Instant.ofEpochMilli(selectedTime.getTime())
+                .atZone(ZoneId.systemDefault())
+                .toLocalTime()
+                .withSecond(0)
+                .withNano(0);
+    }
+
+    private void setSpinnerTime(JSpinner spinner, LocalTime time) {
+        spinner.setValue(Date.from(time.atDate(LocalDate.now())
+                .atZone(ZoneId.systemDefault())
+                .toInstant()));
     }
 
     private void showMessage(String message) {

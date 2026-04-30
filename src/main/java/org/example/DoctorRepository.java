@@ -124,4 +124,21 @@ public class DoctorRepository {
 
         return doctors;
     }
+
+    public boolean updateSchedule(int doctorId, String workStart, String workEnd, int slotMinutes) {
+        String sql = "UPDATE doctors SET work_start = ?, work_end = ?, slot_minutes = ? WHERE id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, workStart);
+            ps.setString(2, workEnd);
+            ps.setInt(3, slotMinutes);
+            ps.setInt(4, doctorId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
