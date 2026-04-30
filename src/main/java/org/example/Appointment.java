@@ -1,8 +1,10 @@
 package org.example;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class Appointment {
+    private static final DateTimeFormatter DISPLAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private int id;
     private int doctorId;
     private int patientId;
@@ -74,10 +76,10 @@ public class Appointment {
 
     @Override
     public String toString() {
-        return "Appointment ID=" + id +
-                ", doctor=" + doctorId +
-                ", patient=" + patientId +
-                ", time=" + dateTime +
-                ", status=" + getStatus();
+        return "#" + id +
+                "  doctor:" + doctorId +
+                "  patient:" + patientId +
+                "  " + dateTime.format(DISPLAY_FORMAT) +
+                "  [" + getStatus() + "]";
     }
 }

@@ -106,4 +106,22 @@ public class DoctorRepository {
             return false;
         }
     }
+
+    public List<Doctor> getAllDoctors() {
+        List<Doctor> doctors = new ArrayList<>();
+        String sql = "SELECT * FROM doctors ORDER BY specialization, name";
+
+        try (Connection conn = Database.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                doctors.add(DoctorFactory.fromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return doctors;
+    }
 }

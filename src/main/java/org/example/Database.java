@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 public class Database {
 
-    private static final String URL = "jdbc:sqlite:clinic.db";
+    private static final String DEFAULT_DB_PATH = "clinic.db";
 
     static {
         try {
@@ -16,9 +16,24 @@ public class Database {
         }
     }
 
+    private Database() {
+    }
+
+    public static String getUrl() {
+        String configuredUrl = System.getProperty("clinic.db.url");
+        if (configuredUrl != null && !configuredUrl.isBlank()) {
+            return configuredUrl;
+        }
+
+        String dbPath = System.getProperty("clinic.db.path", DEFAULT_DB_PATH);
+        return "jdbc:sqlite:" + dbPath;
+    }
+
     public static Connection getConnection() {
         try {
-            return DriverManager.getConnection(URL);
+            Connection connection = DriverManager.getConnection(getUrl());
+            connection.createStatement().execute("PRAGMA foreign_keys = ON");
+            return connection;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

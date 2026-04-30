@@ -54,6 +54,6 @@ public abstract class Doctor {
 
     @Override
     public String toString() {
-        return name + " (" + specialization + ")";
+        return "#" + id + "  " + name + "  [" + specialization + "]";
     }
 }

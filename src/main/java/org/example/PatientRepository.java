@@ -41,4 +41,26 @@ public class PatientRepository {
             return false;
         }
     }
+
+    public Patient getById(int id) {
+        String sql = "SELECT * FROM patients WHERE id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Patient(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("phone")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }

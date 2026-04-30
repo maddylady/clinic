@@ -1,5 +1,6 @@
 package org.example;
 
+import java.awt.GraphicsEnvironment;
 import java.time.LocalTime;
 import java.time.LocalDate;
 import java.util.List;
@@ -11,6 +12,12 @@ public class Main {
         DatabaseInitializer.init();
         ClinicFacade facade = new ClinicFacade();
         seedDoctorsIfNeeded(facade);
+
+        if (!GraphicsEnvironment.isHeadless()) {
+            ClinicDesktopApp.startApplication(facade);
+            return;
+        }
+
         mainMenu(facade);
     }
 
@@ -150,6 +157,11 @@ public class Main {
             return;
         }
 
+        if (date.isBefore(LocalDate.now())) {
+            System.out.println("Appointments cannot be booked in the past.");
+            return;
+        }
+
         // Get available time slots
         List<LocalTime> slots = facade.getAvailableSlots(doctorId, date);
         if (slots.isEmpty()) {
@@ -208,8 +220,12 @@ public class Main {
         System.out.print("Enter the appointment ID you want to cancel: ");
         int appId = readInt();
 
-        facade.cancelAppointment(appId); // State pattern is used inside
-        System.out.println("If the status allowed it, the appointment was changed to CANCELLED.");
+        boolean cancelled = facade.cancelAppointmentForPatient(appId, patientId);
+        if (cancelled) {
+            System.out.println("If the current status allowed it, the appointment is now CANCELLED.");
+        } else {
+            System.out.println("Appointment not found for your account.");
+        }
     }
 
     // DOCTOR MENU
@@ -296,8 +312,12 @@ public class Main {
         System.out.print("Enter the appointment ID you want to complete: ");
         int appId = readInt();
 
-        facade.completeAppointment(appId);
-        System.out.println("If the status was CONFIRMED, the appointment became COMPLETED.");
+        boolean completed = facade.completeAppointmentForDoctor(appId, doctorId);
+        if (completed) {
+            System.out.println("If the status was CONFIRMED, the appointment is now COMPLETED.");
+        } else {
+            System.out.println("Appointment not found for your account.");
+        }
     }
 
     private static int readInt() {

@@ -13,10 +13,6 @@ public class ClinicFacade {
     private final PatientRepository patientRepo = new PatientRepository();
     private final AppointmentRepository appointmentRepo = new AppointmentRepository();
 
-    private static final LocalTime WORK_START = LocalTime.of(9, 0);
-    private static final LocalTime WORK_END = LocalTime.of(17, 0);
-    private static final int SLOT_MINUTES = 30;
-
     // Register a new patient
     public int registerPatient(String name, String phone) {
         return patientRepo.addPatient(name, phone);
@@ -27,6 +23,10 @@ public class ClinicFacade {
         return doctorRepo.findBySpecialization(specialization);
     }
 
+    public List<Doctor> getAllDoctors() {
+        return doctorRepo.getAllDoctors();
+    }
+
     // Get all available specializations
     public List<String> getAllSpecializations() {
         return doctorRepo.getAllSpecializations();
@@ -34,6 +34,10 @@ public class ClinicFacade {
 
     public boolean patientExists(int patientId) {
         return patientRepo.exists(patientId);
+    }
+
+    public Patient getPatientById(int patientId) {
+        return patientRepo.getById(patientId);
     }
 
     // Book an appointment for a patient with a doctor
@@ -51,30 +55,56 @@ public class ClinicFacade {
         return appointmentRepo.getForDoctor(doctorId);
     }
 
-    public void cancelAppointment(int appointmentId) {
+    public boolean cancelAppointment(int appointmentId) {
         Appointment a = appointmentRepo.getById(appointmentId);
         if (a == null) {
-            System.out.println("Appointment not found.");
-            return;
+            return false;
         }
 
         a.cancel(); // State pattern
         appointmentRepo.updateStatus(appointmentId, a.getStatus());
+        return true;
     }
 
-    public void completeAppointment(int appointmentId) {
+    public boolean cancelAppointmentForPatient(int appointmentId, int patientId) {
+        Appointment appointment = appointmentRepo.getByIdForPatient(appointmentId, patientId);
+        if (appointment == null) {
+            return false;
+        }
+
+        appointment.cancel();
+        appointmentRepo.updateStatus(appointmentId, appointment.getStatus());
+        return true;
+    }
+
+    public boolean completeAppointment(int appointmentId) {
         Appointment a = appointmentRepo.getById(appointmentId);
         if (a == null) {
-            System.out.println("Appointment not found.");
-            return;
+            return false;
         }
 
         a.complete(); // State pattern
         appointmentRepo.updateStatus(appointmentId, a.getStatus());
+        return true;
+    }
+
+    public boolean completeAppointmentForDoctor(int appointmentId, int doctorId) {
+        Appointment appointment = appointmentRepo.getByIdForDoctor(appointmentId, doctorId);
+        if (appointment == null) {
+            return false;
+        }
+
+        appointment.complete();
+        appointmentRepo.updateStatus(appointmentId, appointment.getStatus());
+        return true;
     }
 
     public boolean doctorExists(int doctorId) {
         return doctorRepo.exists(doctorId);
+    }
+
+    public Doctor getDoctorById(int doctorId) {
+        return doctorRepo.getById(doctorId);
     }
 
     public int addDoctor(String name, String specialization) {
@@ -91,6 +121,9 @@ public class ClinicFacade {
 
         // Get the doctor to access working schedule
         Doctor doctor = doctorRepo.getById(doctorId);
+        if (doctor == null) {
+            return new ArrayList<>();
+        }
 
         LocalTime workStart = doctor.getWorkStart();
         LocalTime workEnd = doctor.getWorkEnd();
@@ -130,6 +163,18 @@ public class ClinicFacade {
                                          int doctorId,
                                          LocalDate date,
                                          LocalTime time) {
+        if (!patientRepo.exists(patientId) || !doctorRepo.exists(doctorId)) {
+            return false;
+        }
+
+        if (date.isBefore(LocalDate.now())) {
+            return false;
+        }
+
+        if (!getAvailableSlots(doctorId, date).contains(time)) {
+            return false;
+        }
+
         LocalDateTime dateTime = LocalDateTime.of(date, time);
         return appointmentRepo.book(doctorId, patientId, dateTime.toString());
     }

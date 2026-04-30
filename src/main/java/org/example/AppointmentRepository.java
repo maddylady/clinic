@@ -24,6 +24,9 @@ public class AppointmentRepository {
             ps.executeUpdate();
             return true;
         } catch (SQLException e) {
+            if (e.getErrorCode() == 19) {
+                return false;
+            }
             e.printStackTrace();
             return false;
         }
@@ -84,6 +87,58 @@ public class AppointmentRepository {
                 );
             }
 
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public Appointment getByIdForPatient(int appointmentId, int patientId) {
+        String sql = "SELECT * FROM appointments WHERE id = ? AND patient_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, appointmentId);
+            ps.setInt(2, patientId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Appointment(
+                        rs.getInt("id"),
+                        rs.getInt("doctor_id"),
+                        rs.getInt("patient_id"),
+                        LocalDateTime.parse(rs.getString("date_time")),
+                        rs.getString("status")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public Appointment getByIdForDoctor(int appointmentId, int doctorId) {
+        String sql = "SELECT * FROM appointments WHERE id = ? AND doctor_id = ?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, appointmentId);
+            ps.setInt(2, doctorId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new Appointment(
+                        rs.getInt("id"),
+                        rs.getInt("doctor_id"),
+                        rs.getInt("patient_id"),
+                        LocalDateTime.parse(rs.getString("date_time")),
+                        rs.getString("status")
+                );
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
